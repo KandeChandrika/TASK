@@ -1,0 +1,409 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+import warnings
+warnings.filterwarnings('ignore')
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import requests
+from bs4 import BeautifulSoup
+import re
+import time
+from IPython.core.interactiveshell import InteractiveShell
+InteractiveShell.ast_node_interactivity ='all'
+
+
+# In[2]:
+
+
+URL='https://www.flipkart.com/search?q=refrigerator&sid=j9e%2Cabm%2Chzg&as=on&as-show=on&otracker=AS_QueryStore_HistoryAutoSuggest_2_3_na_na_na&otracker1=AS_QueryStore_HistoryAutoSuggest_2_3_na_na_na&as-pos=2&as-type=HISTORY&suggestionId=refrigerator%7CRefrigerators&requestId=956b4b52-91cf-4ef3-b166-f6caf446d0ef'
+
+
+# In[3]:
+
+
+productname=[]
+price=[]
+rating=[]
+features=[]
+pagenum=[]
+
+#for loop for pages
+for i in range(1,25):
+    start_time=time.time()
+    URL='https://www.flipkart.com/search?q=refrigerator&sid=j9e%2Cabm%2Chzg&as=on&as-show=on&otracker=AS_QueryStore_HistoryAutoSuggest_2_3_na_na_na&otracker1=AS_QueryStore_HistoryAutoSuggest_2_3_na_na_na&as-pos=2&as-type=HISTORY&suggestionId=refrigerator%7CRefrigerators&requestId=956b4b52-91cf-4ef3-b166-f6caf446d0ef'
+    page=requests.get(URL)
+    pagecontent=page.text
+    soup=BeautifulSoup(pagecontent)
+    
+    
+    for x in soup.find_all('div',attrs={'class':'_3pLy-c row'}):
+        pname=x.find('div',attrs={'class':'_4rR01T'})
+        cost=x.find('div',attrs={'class':'_1_WHN1'})
+        rat=x.find('div',attrs={'class':'_3LWZlK'})
+        specs=x.find('ul',attrs={'class':'_1xgFaf'})
+        
+        if pname is None:
+            productname.append(np.NaN)
+        else:
+            productname.append(pname.text)
+            
+        if cost is None:
+            price.append(np.NaN)
+        else:
+            price.append(cost.text)
+            
+        if rat is None:
+            rating.append(np.NaN)
+        else:
+            rating.append(rat.text)
+            
+        if specs is None:
+            features.append(np.NaN)
+        else:
+            features.append(specs.text)
+            
+        pagenum.append(i)
+    print('page {} completed in {} seconds'.format(i,time.time()-start_time))
+
+
+# In[4]:
+
+
+fridge_df=pd.DataFrame({'productname':productname,'Price':price,'specs':features,'rating':rating,'PageNo':pagenum})
+
+
+# In[5]:
+
+
+fridge_df
+
+
+# In[6]:
+
+
+fridge_df.to_csv('fridge.csv')
+
+
+# In[7]:
+
+
+regex=r'^[A-Za-z]+[\sA-za-z]+[\sCompressor]+'
+fridge_df['compressor_details']=fridge_df['specs'].apply(lambda x:re.compile(regex).findall(x))
+
+
+# In[8]:
+
+
+fridge_df
+
+
+# In[9]:
+
+
+regex=r'[0-9][\sA-Za-z]+ct'
+fridge_df['warranty-product']=fridge_df['specs'].apply(lambda x:re.compile(regex).findall(x))
+
+
+# In[10]:
+
+
+fridge_df
+
+
+# In[11]:
+
+
+regex=r'\d+[\sA-Za-z]+or'
+fridge_df['warranty-compressor']=fridge_df['specs'].apply(lambda x:re.compile(regex).findall(x))
+
+
+# In[12]:
+
+
+fridge_df
+
+
+# In[13]:
+
+
+regex=r'^[A-Za-z]+'
+fridge_df['Brand']=fridge_df['productname'].apply(lambda x:re.compile(regex).findall(x))
+
+
+# In[14]:
+
+
+fridge_df
+
+
+# In[15]:
+
+
+fridge_df.info()
+
+
+# In[16]:
+
+
+regex=r'\d+\sL'
+fridge_df['Litres']=fridge_df['productname'].apply(lambda x:re.compile(regex).findall(x))
+
+
+# In[17]:
+
+
+fridge_df
+
+
+# In[18]:
+
+
+fridge_df['productname'][2]
+
+
+# In[19]:
+
+
+fridge_df['productname'][0]
+
+
+# In[20]:
+
+
+fridge_df
+
+
+# In[21]:
+
+
+fridge_df['Price']=fridge_df['Price'].apply(lambda x:x.replace('₹','').replace(',','')).astype(float)
+
+
+# In[22]:
+
+
+fridge_df
+
+
+# In[23]:
+
+
+fridge_df['compressor_details']=fridge_df['compressor_details'].apply(lambda x:''.join(x))
+fridge_df['warranty-product']=fridge_df['warranty-product'].apply(lambda x:''.join(x))
+fridge_df['warranty-compressor']=fridge_df['warranty-compressor'].apply(lambda x:''.join(x))
+fridge_df['Brand']=fridge_df['Brand'].apply(lambda x:''.join(x))
+fridge_df['Litres']=fridge_df['Litres'].apply(lambda x:''.join(x))
+
+
+# In[24]:
+
+
+fridge_df.head()
+
+
+# In[25]:
+
+
+fridge_df['compressor_details']=fridge_df['compressor_details'].apply(lambda x:''.join(x))
+fridge_df['warranty-product']=fridge_df['warranty-product'].apply(lambda x:x.replace('L',''))
+fridge_df['warranty-compressor']=fridge_df['warranty-compressor'].apply(lambda x:''.join(x))
+fridge_df['Brand']=fridge_df['Brand'].apply(lambda x:''.join(x))
+fridge_df['Litres']=fridge_df['Litres'].apply(lambda x:x.replace('L',''))
+
+
+# In[26]:
+
+
+fridge_df
+
+
+# In[57]:
+
+
+fridge_df['compressor_details']=fridge_df['compressor_details'].apply(lambda x:''.join(x))
+fridge_df['warranty-product']=fridge_df['warranty-product'].apply(lambda x:x.replace("warranty",''))
+fridge_df['warranty-compressor']=fridge_df['warranty-compressor'].apply(lambda x:''.join(x))
+fridge_df['Brand']=fridge_df['Brand'].apply(lambda x:''.join(x))
+fridge_df['Litres']=fridge_df['Litres'].apply(lambda x:x.replace('L',''))
+
+
+# In[58]:
+
+
+fridge_df
+
+
+# In[ ]:
+
+
+
+
+
+# In[60]:
+
+
+sns.distplot(fridge_df.Price)
+
+
+# In[59]:
+
+
+sns.distplot(fridge_df.Litres)
+
+
+# In[29]:
+
+
+fridge_df.groupby('warranty-compressor').count()
+
+
+# In[30]:
+
+
+fridge_df.groupby('warranty-product').count()
+
+
+# In[31]:
+
+
+fridge_df.groupby('Brand').count()
+
+
+# In[32]:
+
+
+fridge_df.describe()
+
+
+# In[33]:
+
+
+plt.figure(figsize=(15,7))   #doubt
+sns.boxplot(x=fridge_df.Brand,y=fridge_df.Price)
+
+
+# In[34]:
+
+
+sns.distplot(fridge_df.rating)
+
+
+# In[35]:
+
+
+sns.distplot(fridge_df.Price)
+
+
+# In[36]:
+
+
+sns.displot(fridge_df.Brand)
+
+
+# In[37]:
+
+
+fridge_df.groupby('Brand').agg({'Price':['min','max','mean']})
+
+
+# In[38]:
+
+
+plt.figure(figsize=(15,5))
+plt.hist(fridge_df['Brand'],bins=9,color='blue')
+plt.xticks(np.arange(0,15,2))
+plt.show()
+
+
+# In[39]:
+
+
+plt.figure(dpi=70)
+sns.heatmap(fridge_df.corr(),linecolor='white',linewidths=2,annot=True)
+
+
+# In[40]:
+
+
+Brand=['CANDY','Godrej','LG','Lloyd','MarQ','SAMSUNG','Whirlpool']
+Count=[17,98,32,10,12,82,7]
+ 
+plt.bar(Brand,Count,color='skyblue',edgecolor='green')
+
+plt.xlabel('Brand', fontsize=16)
+plt.ylabel('Count', fontsize=16)
+plt.title('Distribution of Brands',fontsize=20)
+plt.plot(Count)
+plt.show()
+
+
+# In[41]:
+
+
+fridge_df.groupby('Brand').count()
+
+
+# In[42]:
+
+
+plt.figure(dpi=500)
+sns.kdeplot(fridge_df['Price']);
+
+
+# In[43]:
+
+
+plt.figure(figsize=(15,7))
+sns.boxplot(x=fridge_df.Brand,y=fridge_df.Price)
+
+
+# In[44]:
+
+
+City=['SAMSUNG','Godrej','Washington','Tokyo','Moscow']
+
+Price_sqft_in_K_center = [60,40,70,65,45]
+Price_sqft_in_K_outer = [45,22,50,52,20]
+
+location = ['center', 'outer']
+ 
+plt.bar(City,Price_sqft_in_K_center,color='skyblue',edgecolor='yellow')
+plt.bar(City,Price_sqft_in_K_outer,bottom=Price_sqft_in_K_center,color='darkblue',edgecolor='yellow')
+
+plt.xlabel('City', fontsize=16)
+plt.ylabel('Price_sft_in_K', fontsize=16)
+plt.title('Barchart - Price_sft_in_K across cities',fontsize=20)
+plt.legend(location, loc = 0)
+plt.show()
+
+
+# In[45]:
+
+
+fridge_df.corr()
+
+
+# In[46]:
+
+
+plt.figure(dpi = 300)
+sns.heatmap(fridge_df.corr(),linecolor='white',linewidths=2,annot=True);
+
+
+# In[47]:
+
+
+sns.get_dataset_names()
+
+
+# In[ ]:
+
+
+
+
